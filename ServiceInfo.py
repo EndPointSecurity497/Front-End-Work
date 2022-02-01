@@ -15,7 +15,7 @@ while True:
             # ignores many of the windows processes, as we don't want to send those
             # possibly other programs we want to whitelist in the future
             if pr["name"] != 'svchost.exe':
-                print(f'{pr["name"]}\t{pr["cpu_percent"]}\t{pr["memory_percent"]}\t{pr["num_threads"]}\t{pr["username"]}')
+                print(f'{pr["name"]}\t{pr["cpu_percent"]}\t{pr["memory_percent"]}\t{pr["num_threads"]}\t{pr["username"]}\t{pr["pid"]}')
         except (OSError, psutil.AccessDenied):
             print(pr.name(), 'ACCESS DENIED')
     print('\n*** Ctrl-C to Exit ***\n\n')
