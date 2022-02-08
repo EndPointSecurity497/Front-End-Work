@@ -6,22 +6,6 @@ import datetime
 from uuid import getnode as get_mac #import statment for getting mac adress
 ### END IMPORTS ###
 
-def macaddr():
-    # figure out what to take from this to get mac addr
-    sub_dict = {'Name': [],'Memory Percent': [], 'Mac': []}
-
-    while True:
-        print(datetime.datetime.now())
-        for proc in psutil.process_iter():
-            try:
-                pr = proc.as_dict()
-                mac = get_mac() #command to get mac address
-                print(f'{pr["name"]}\t{pr["memory_percent"]}\t{"mac"}')
-            except (OSError, psutil.AccessDenied):
-                print(pr.name(), 'ACCESS DENIED')
-        print('\n*** Ctrl-C to Exit ***\n\n')
-        time.sleep(30) # Sleep for 10 Mins
-
 def dump_csv(pslst, fname):
     f = open(fname, 'w')
     f.write('time, machine_id, ps_name, mempct, cpupct, memabs, numthreads, user, path, pid\n')
