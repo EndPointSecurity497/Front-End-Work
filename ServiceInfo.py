@@ -11,6 +11,18 @@ def dump_csv(pslst, fname):
     
     for ps in pslst:
         f.write(ps + '\n')
+    
+#TODO: NEED TO ACTUALLY USE IN THE MAIN LOOP WHERE WE GET ALL THE STUFF    
+def gets_path():
+    currentPIDs=psutil.pids()
+    currentPIDs.remove(0)
+    print(currentPIDs)
+    for proc in currentPIDs:
+        try:
+            print(psutil.Process(proc).exe())
+
+        except:
+            print('undeterminable path')
 
 def main():
     while True:
