@@ -11,18 +11,6 @@ def dump_csv(pslst, fname):
     
     for ps in pslst:
         f.write(ps + '\n')
-    
-#TODO: NEED TO ACTUALLY USE IN THE MAIN LOOP WHERE WE GET ALL THE STUFF    
-def gets_path():
-    currentPIDs=psutil.pids()
-    currentPIDs.remove(0)
-    print(currentPIDs)
-    for proc in currentPIDs:
-        try:
-            print(psutil.Process(proc).exe())
-
-        except:
-            print('undeterminable path')
 
 def main():
     while True:
@@ -38,16 +26,20 @@ def main():
                 memabs = None
                 cpupct = proc.cpu_percent()
                 numthd = proc.num_threads()
-                usr = None #proc.username()
                 
-                pid = None #proc.pid
-                #print('test')
+                ### NEEDS ADMIN PRIVILEGES
+                usr = proc.username()
+                pid = proc.pid
+                ###
+                
                 path = None
+                if pid != 0:
+                    path = psutil.Process(pid).exe()
             
                 # ignores many of the windows processes, as we don't want to send those
                 # possibly other programs we want to whitelist in the future
                 if name != 'svchost.exe':
-                    pslst.append(f'{timestamp},{machine_id},{name},{mempct},{memabs},{numthd}, {usr}, {path}, {pid}')
+                    pslst.append(f'{timestamp},{machine_id},{name},{mempct},{memabs},{numthd},{usr},{path},{pid}')
             except (OSError, psutil.AccessDenied):
                 print(proc.name(), 'ACCESS DENIED')
                 
