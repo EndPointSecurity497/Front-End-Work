@@ -5,18 +5,43 @@ import time
 import datetime
 ### END IMPORTS ###
 
-while True:
-    # WE WANT TO FILTER THIS POSSIBLY AND FORMAT IT DIFFERENTLY
-    print(datetime.datetime.now())
-    # iterates through every process
-    for proc in psutil.process_iter():
-        try:
-            pr = proc.as_dict()
-            # ignores many of the windows processes, as we don't want to send those
-            # possibly other programs we want to whitelist in the future
-            if pr["name"] != 'svchost.exe':
-                print(f'{pr["name"]}\t{pr["cpu_percent"]}\t{pr["memory_percent"]}\t{pr["num_threads"]}\t{pr["username"]}\t{pr["pid"]}')
-        except (OSError, psutil.AccessDenied):
-            print(pr.name(), 'ACCESS DENIED')
-    print('\n*** Ctrl-C to Exit ***\n\n')
-    time.sleep(1) # Sleep for 1 second
+def dump_csv(pslst, fname):
+    f = open(fname, 'w')
+    f.write('time, machine_id, ps_name, mempct, cpupct, memabs, numthreads, user, path, pid\n')
+    
+    for ps in pslst:
+        f.write(ps + '\n')
+
+def main():
+    while True:
+        # WE WANT TO FILTER THIS POSSIBLY AND FORMAT IT DIFFERENTLY
+        timestamp = datetime.datetime.now()
+        pslst = []
+        # iterates through every process
+        for proc in psutil.process_iter():
+            try:
+                name = proc.name()
+                machine_id = None
+                mempct = proc.memory_percent()
+                memabs = None
+                cpupct = proc.cpu_percent()
+                numthd = proc.num_threads()
+                usr = None #proc.username()
+                
+                pid = None #proc.pid
+                #print('test')
+                path = None
+            
+                # ignores many of the windows processes, as we don't want to send those
+                # possibly other programs we want to whitelist in the future
+                if name != 'svchost.exe':
+                    pslst.append(f'{timestamp},{machine_id},{name},{mempct},{memabs},{numthd}, {usr}, {path}, {pid}')
+            except (OSError, psutil.AccessDenied):
+                print(proc.name(), 'ACCESS DENIED')
+                
+        dump_csv(pslst, 'foo.txt')
+        print('\n*** Ctrl-C to Exit ***\n\n')
+        time.sleep(1) # Sleep for 1 second
+        
+if __name__ == '__main__':
+    main()
