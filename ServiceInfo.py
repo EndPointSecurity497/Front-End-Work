@@ -1,4 +1,5 @@
 ### IMPORTS ###
+import sys
 import psutil
 import socket
 import time
@@ -22,8 +23,12 @@ def init_sftp():
 
 def dump_csv(pslst, fname):
     # BUG: IF FILE IS ALREADY OPEN THEN THIS FAILS
-    f = open(fname, 'w')
-    f.write('time, machine_id, ps_name, mempct, cpupct, memabs, numthreads, user, path, pid\n')
+    try:
+        f = open(fname, 'w')
+        f.write('time, machine_id, ps_name, mempct, cpupct, memabs, numthreads, user, path, pid\n')
+    except:
+        print('could not dump to csv file\n fatal error\nexiting...') 
+        sys.exit(0)
     
     for ps in pslst:
         f.write(ps + '\n')
