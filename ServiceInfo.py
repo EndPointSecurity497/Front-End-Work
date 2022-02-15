@@ -2,9 +2,23 @@
 import psutil
 import socket
 import time
+import pysftp
 import datetime
 from uuid import getnode as get_mac #import statment for getting mac adress
 ### END IMPORTS ###
+def upload_csv(sftp, fname):
+    sftp.put(fname)
+
+def init_sftp():
+    try:
+        cnopts = pysftp.CnOpts()
+        cnopts.hostkeys = None
+        sftp = pysftp.Connection('hostname', username='username', password='password', cnopts=cnopts)
+        sftp.cwd('')   #Put path to directory here
+        return sftp
+    except:
+        print('An error occurred trying to connect.')
+        return None
 
 def dump_csv(pslst, fname):
     # BUG: IF FILE IS ALREADY OPEN THEN THIS FAILS
@@ -17,6 +31,7 @@ def dump_csv(pslst, fname):
 
 def main():
     sys_mem = psutil.virtual_memory()[0]
+    sftp = init_sftp()
 
     while True:
         timestamp = datetime.datetime.now()
@@ -34,7 +49,7 @@ def main():
                 
                 ### NEEDS ADMIN PRIVILEGES
                 usr = proc.username()
-                
+
                 usr = usr.replace("NT AUTHORITY\\", "", 1)  # removes "NT AUTHORITY" from the user field
                 usr = usr.replace(socket.gethostname() + "\\", "", 1)  # removes hostname (device name) from before username. 
 
@@ -54,7 +69,17 @@ def main():
             except (OSError, psutil.AccessDenied):
                 print(proc.name(), 'ACCESS DENIED')
                 
-        dump_csv(pslst, f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}"+str(machine_id) + '.csv')
+        fname = f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}" +str(machine_id) + '.csv'
+        dump_csv(pslst, fname)
+
+        # try and connect files to the sftp
+        try:
+            upload_csv(sftp, fname)
+            # if upload succeeds dump to server and delete the file
+        except:
+            #TODO: if fails add the current file to a queue
+            print("UPLOAD FAILED")
+        
         print('\n*** Ctrl-C to Exit ***\n\n')
         time.sleep(1) # Sleep for 1 second
         
