@@ -66,8 +66,8 @@ def main():
                     # possibly other programs we want to whitelist in the future
                     if name != 'svchost.exe':
                         pslst.append(f'{timestamp},{machine_id},{name},{mempct},{cpupct},{memabs} MB,{numthd},{usr},{path},{pid}')
-            except (OSError, psutil.AccessDenied):
-                print(proc.name(), 'ACCESS DENIED')
+            except:
+                print('ACCESS DENIED')
                 
         fname = f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}" +str(machine_id) + '.csv'
         dump_csv(pslst, fname)
