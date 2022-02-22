@@ -1,5 +1,6 @@
 ### IMPORTS ###
 import sys
+import os
 import psutil
 import socket
 import time
@@ -37,6 +38,7 @@ def dump_csv(pslst, fname):
 def main():
     sys_mem = psutil.virtual_memory()[0]
     sftp = init_sftp()
+    failed_files = []
 
     while True:
         timestamp = datetime.datetime.now()
@@ -52,6 +54,11 @@ def main():
                 cpupct = proc.cpu_percent()
                 numthd = proc.num_threads()
                 
+                # not being dumped
+                cores = os.cpu_count()
+                ### FEATURE: POSSIBLY ADD CORES AND CLOCK SPEED
+                clock_speed = None
+
                 ### NEEDS ADMIN PRIVILEGES
                 usr = proc.username()
 
@@ -80,10 +87,16 @@ def main():
         # try and connect files to the sftp
         try:
             upload_csv(sftp, fname)
+            os.remove(fname) #removes a file.
             # if upload succeeds dump to server and delete the file
+            for file in failed_files:
+                upload_csv(sftp, file)
+                os.remove(file)
         except:
             #TODO: if fails add the current file to a queue
             print("UPLOAD FAILED")
+            failed_files.append(fname)
+            print(failed_files)
         
         print('\n*** Ctrl-C to Exit ***\n\n')
         time.sleep(1) # Sleep for 1 second
