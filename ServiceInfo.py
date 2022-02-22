@@ -8,6 +8,7 @@ import pysftp
 import datetime
 from uuid import getnode as get_mac #import statment for getting mac adress
 ### END IMPORTS ###
+
 def upload_csv(sftp, fname):
     sftp.put(fname)
 
@@ -22,6 +23,7 @@ def init_sftp():
         print('An error occurred trying to connect.')
         return None
 
+# writes process data in an organized csv format
 def dump_csv(pslst, fname):
     # BUG: IF FILE IS ALREADY OPEN THEN THIS FAILS
     try:
@@ -36,32 +38,35 @@ def dump_csv(pslst, fname):
     f.close()
 
 def main():
-    sys_mem = psutil.virtual_memory()[0]
-    sftp = init_sftp()
-    failed_files = []
+    sys_mem = psutil.virtual_memory()[0] # gets total amount of system memory
+    sftp = init_sftp() # initializes ftp connection
+    failed_files = [] # creates a list for any files we fail to upload with ftp
 
     while True:
+        # collect data that is the same for each process
         timestamp = datetime.datetime.now()
         pslst = []
         machine_id = get_mac()
 
-        # iterates through every process
+        # not being dumped
+        cores = os.cpu_count()
+        ### FEATURE: POSSIBLY ADD CORES AND CLOCK SPEED
+        clock_speed = None
+
+        # iterates through every process and collects various data about it
         for proc in psutil.process_iter():
             try:
+                # collect process dependent data
                 name = proc.name()
                 mempct = proc.memory_percent()
                 memabs = sys_mem * mempct / 100 / 10**6
                 cpupct = proc.cpu_percent()
                 numthd = proc.num_threads()
-                
-                # not being dumped
-                cores = os.cpu_count()
-                ### FEATURE: POSSIBLY ADD CORES AND CLOCK SPEED
-                clock_speed = None
 
                 ### NEEDS ADMIN PRIVILEGES
                 usr = proc.username()
 
+                # clean up username field
                 usr = usr.replace("NT AUTHORITY\\", "", 1)  # removes "NT AUTHORITY" from the user field
                 usr = usr.replace(socket.gethostname() + "\\", "", 1)  # removes hostname (device name) from before username. 
 
@@ -70,7 +75,7 @@ def main():
                 
                 #### WONT WORK WITHOUT A PID, NEED TO ACCOUNT FOR THIS
                 path = None
-                if pid != 0:
+                if pid != 0: # pid 0 is a dummy process initiated by windows
                     path = psutil.Process(pid).exe()
             
                     # BUG: IF USER NAMES MALWARE SVCHOST.EXE THIS WILL ALLOW MALWARE TO RUN
@@ -81,6 +86,7 @@ def main():
             except:
                 print('ACCESS DENIED')
                 
+        # dump the csv
         fname = f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}" +str(machine_id) + '.csv'
         dump_csv(pslst, fname)
 
@@ -93,7 +99,7 @@ def main():
                 upload_csv(sftp, file)
                 os.remove(file)
         except:
-            #TODO: if fails add the current file to a queue
+            # if fails add the current file to a queue of files that we didn't upload
             print("UPLOAD FAILED")
             failed_files.append(fname)
             print(failed_files)
