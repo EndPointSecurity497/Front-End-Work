@@ -16,7 +16,7 @@ def init_sftp():
     try:
         cnopts = pysftp.CnOpts()
         cnopts.hostkeys = None
-        sftp = pysftp.Connection('hostname', username='username', password='password', cnopts=cnopts)
+        sftp = pysftp.Connection('54.86.178.133', username='awsftpuser', password='Ipro597dontguessme!', cnopts=cnopts)
         sftp.cwd('')   #Put path to directory here
         return sftp
     except:
@@ -38,10 +38,15 @@ def dump_csv(pslst, fname):
     f.close()
 
 def main():
+    sleep_time = 30
     sys_mem = psutil.virtual_memory()[0] # gets total amount of system memory
     sftp = init_sftp() # initializes ftp connection
     failed_files = [] # creates a list for any files we fail to upload with ftp
+    proc_dict = {} # maps processnames to a pid
 
+    # TODO: EACH TIME THIS RUNS WE WANNA PULL BAD PROCESSES FROM THE AWS FTP SERVER
+    # AND KILL THEM IF THEY'RE BAD
+    # keep most recent copy of the bad processes on the machine
     while True:
         # collect data that is the same for each process
         timestamp = datetime.datetime.now()
@@ -51,7 +56,7 @@ def main():
         # not being dumped
         cores = os.cpu_count()
         ### FEATURE: POSSIBLY ADD CORES AND CLOCK SPEED
-        clock_speed = None
+        clock_speed = psutil.cpu_freq()
 
         # iterates through every process and collects various data about it
         for proc in psutil.process_iter():
@@ -72,10 +77,12 @@ def main():
 
                 pid = proc.pid
                 ###
+
+                proc_dict[name] = pid
                 
                 #### WONT WORK WITHOUT A PID, NEED TO ACCOUNT FOR THIS
                 path = None
-                if pid != 0: # pid 0 is a dummy process initiated by windows
+                if pid != 0: # pid 0 is a dummy process initiated by windows that causes errors
                     path = psutil.Process(pid).exe()
             
                     # BUG: IF USER NAMES MALWARE SVCHOST.EXE THIS WILL ALLOW MALWARE TO RUN
@@ -105,7 +112,7 @@ def main():
             print(failed_files)
         
         print('\n*** Ctrl-C to Exit ***\n\n')
-        time.sleep(1) # Sleep for 1 second
+        time.sleep(sleep_time) # Sleep for 30 seconds
         
 if __name__ == '__main__':
     main()
