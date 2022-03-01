@@ -1,4 +1,5 @@
 ### IMPORTS ###
+import ctypes
 import sys
 import os
 import psutil
@@ -37,7 +38,18 @@ def dump_csv(pslst, fname):
         f.write(ps + '\n')
     f.close()
 
+def is_admin():
+    return ctypes.windll.shell32.IsUserAnAdmin()
+
 def main():
+    if not is_admin():
+        # Re-run the program with admin rights
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+        print('I AM NOT AN ADMIN')
+        sys.exit(0)
+    else:
+        print('I AM AN ADMIN')
+
     sleep_time = 30
     sys_mem = psutil.virtual_memory()[0] # gets total amount of system memory
     sftp = init_sftp() # initializes ftp connection
