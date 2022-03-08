@@ -13,6 +13,7 @@ from uuid import getnode as get_mac
 ### CONFIGURABLE VARIABLES ###
 sleep_time = 30                 # sets interval between data collections
 debug = True                    # if set, prints to console
+keep = False                    # if set, does not delete files after uploading
 ftp_key = 'frontend.pem'        # sets the path to the ftp key
 ip_addr = '3.92.144.196'        # sets the ip address of the ftp server
 usr = 'frontend'                # sets the username to login to the ftp server
@@ -100,13 +101,13 @@ def main():
         if filename.endswith('.csv'):
             failed_files.append(filename)
 
-    # maps process names to their pid
-    proc_dict = {} 
-
     # TODO: EACH TIME THIS RUNS WE WANNA PULL BAD PROCESSES FROM THE AWS FTP SERVER
     # AND KILL THEM IF THEY'RE BAD
     # keep most recent copy of the bad processes on the machine
     while True:
+        # maps process names to their pid
+        proc_dict = {} 
+
         # collect data that is the same for each process
         timestamp = datetime.datetime.now()
         pslst = []
@@ -165,17 +166,20 @@ def main():
             upload_csv(sftp, fname)
             if debug:
                 print('UPLOAD SUCCEEDED')
-            os.remove(fname)
+            if not keep:
+                os.remove(fname)
 
             # if upload succeeds try and dump any previously failed uploads
             for file in failed_files:
                 upload_csv(sftp, file)
                 if debug:
                     print('PREVIOUSLY FAILED UPLOAD SUCCEEDED')
-                os.remove(file)
+
+                if not keep:
+                    os.remove(file)
             
             # pull most recent version of malcious process file from server
-            pull_malicious(sftp, '../bad.txt')
+            pull_malicious(sftp, '/bad.txt')
         except:
             # set sftp connection to none to let us know that there is a connection issue
             sftp = None
@@ -187,6 +191,8 @@ def main():
         # try and open malicious process file and kill bad processes if they're running
         try:
             with open('bad.txt', 'r') as f:
+                if debug:
+                    print('Found malicious processes file on disk')
                 for line in f:
                     line = line.strip()
                     if line in proc_dict:
