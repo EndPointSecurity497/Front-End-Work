@@ -6,59 +6,102 @@ import psutil
 import socket
 import time
 import pysftp
+import warnings
 import datetime
-from uuid import getnode as get_mac #import statment for getting mac adress
-### END IMPORTS ###
+from uuid import getnode as get_mac
 
-def pull_malicious():
-    pass
+### CONFIGURABLE VARIABLES ###
+sleep_time = 30                 # sets interval between data collections
+debug = True                    # if set, prints to console
+ftp_key = 'frontend.pem'        # sets the path to the ftp key
+ip_addr = '3.92.144.196'        # sets the ip address of the ftp server
+usr = 'frontend'                # sets the username to login to the ftp server
 
+# pull file with malicious processes from the FTP server
+def pull_malicious(sftp, fname):
+    try:
+        sftp.get(fname)
+        if debug:
+            print("Malicious processes retrieved")
+    except:
+        if debug:
+            print("Could not retrieve malicious processes file")
+
+# uploads given file to the SFTP server to the current working directory
 def upload_csv(sftp, fname):
     sftp.put(fname)
 
+# initializes an SFTP conenction object
 def init_sftp():
     try:
-        foobar = pysftp.CnOpts()
-        foobar.hostkeys = None
-        sftp = pysftp.Connection('3.92.144.196', username='frontend', private_key='frontend.pem', cnopts=foobar)
-        sftp.cwd('upload')   #Put path to directory here
+        # some versions of pysftp has a bug where it 
+        # says that you failed to load hostkeys even when you
+        # set it to ignore hostkeys. this suppresses that warning
+        warnings.filterwarnings('ignore', '.*Failed to load HostKeys.*')
+
+        # sets SFTP connection options
+        opts = pysftp.CnOpts()
+        opts.hostkeys = None
+
+        # create SFTP connection, change to the upload directory, and return the new connection object
+        sftp = pysftp.Connection(ip_addr, username=usr, private_key=ftp_key, cnopts=opts)
+        sftp.cwd('upload')
         return sftp
     except:
-        print('An error occurred trying to connect.')
+        # returns None if FTP connection fails
+        if debug:
+            print('An error occurred trying to connect.')
         return None
 
 # writes process data in an organized csv format
 def dump_csv(pslst, fname):
-    # BUG: IF FILE IS ALREADY OPEN THEN THIS FAILS
     try:
+        # open given file in writing mode, label the data, and write the data for each process to the file
+        # finally, close the file when done
         f = open(fname, 'w')
         f.write('time, machine_id, ps_name, mempct, cpupct, memabs, numthreads, user, path, pid\n')
+        for ps in pslst:
+            f.write(ps + '\n')
+        f.close()
     except:
-        print('could not dump to csv file\n fatal error\nexiting...') 
+        # tries to reboot program if CSV dump fails
+        if debug:
+            print('FATAL ERROR\n Could not dump process data to CSV file \n Attempting to relaunch...')
         sys.exit(0)
-    
-    for ps in pslst:
-        f.write(ps + '\n')
-    f.close()
 
+# returns whether the user is a system administrator
 def is_admin():
     return ctypes.windll.shell32.IsUserAnAdmin()
 
+# infinite loop of data collection, dumping, and killing
 def main():
     if not is_admin():
         # Re-run the program with admin rights
-        print('I AM NOT AN ADMIN')
-        print('ATTEMPTING TO RELAUNCH AS ADMIN')
+        if debug:
+            print('I AM NOT AN ADMIN')
+            print('ATTEMPTING TO RELAUNCH AS ADMIN')
         ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
         sys.exit(0)
     else:
-        print('LOGGED IN AS ADMIN')
+        if debug:
+            print('LOGGED IN AS ADMIN')
 
-    sleep_time = 30
-    sys_mem = psutil.virtual_memory()[0] # gets total amount of system memory
-    sftp = init_sftp() # initializes ftp connection
-    failed_files = [] # creates a list for any files we fail to upload with ftp
-    proc_dict = {} # maps processnames to a pid
+    # gets total amount of system memory (RAM)
+    sys_mem = psutil.virtual_memory()[0] 
+
+    # initializes ftp connection
+    sftp = init_sftp() 
+
+    # BUG: need to check if the CSV actually matches our format or if it's just random junk
+    # creates a list for any files we fail to upload with ftp
+    # populates the list with files from any previous runs of the program
+    failed_files = [] 
+    for filename in os.listdir(os.path.dirname(__file__)):
+        if filename.endswith('.csv'):
+            failed_files.append(filename)
+
+    # maps process names to their pid
+    proc_dict = {} 
 
     # TODO: EACH TIME THIS RUNS WE WANNA PULL BAD PROCESSES FROM THE AWS FTP SERVER
     # AND KILL THEM IF THEY'RE BAD
@@ -69,9 +112,8 @@ def main():
         pslst = []
         machine_id = get_mac()
 
-        # not being dumped
+        # currently not being dumped
         cores = os.cpu_count()
-        ### FEATURE: POSSIBLY ADD CORES AND CLOCK SPEED
         clock_speed = psutil.cpu_freq()
 
         # iterates through every process and collects various data about it
@@ -80,11 +122,13 @@ def main():
                 # collect process dependent data
                 name = proc.name()
                 mempct = proc.memory_percent()
-                memabs = sys_mem * mempct / 100 / 10**6
                 cpupct = proc.cpu_percent()
                 numthd = proc.num_threads()
 
-                ### NEEDS ADMIN PRIVILEGES
+                # collects absolute memory usage in MB
+                memabs = sys_mem * mempct / 100000000
+
+                ### LAST 2 ITEMS REQUIRE ADMIN PRIVILEGES
                 usr = proc.username()
 
                 # clean up username field
@@ -92,11 +136,10 @@ def main():
                 usr = usr.replace(socket.gethostname() + "\\", "", 1)  # removes hostname (device name) from before username. 
 
                 pid = proc.pid
-                ###
 
+                # map process name to the pid
                 proc_dict[name] = pid
                 
-                #### WONT WORK WITHOUT A PID, NEED TO ACCOUNT FOR THIS
                 path = None
                 if pid != 0: # pid 0 is a dummy process initiated by windows that causes errors
                     path = psutil.Process(pid).exe()
@@ -107,27 +150,59 @@ def main():
                     if name != 'svchost.exe':
                         pslst.append(f'{timestamp},{machine_id},{name},{mempct},{cpupct},{memabs} MB,{numthd},{usr},{path},{pid}')
             except:
-                print('ACCESS DENIED')
+                if debug:
+                    print('ERROR: Some process data could not be collected for unknown reasons')
                 
-        # dump the csv
-        fname = f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}" +str(machine_id) + '.csv'
+        # dump the csv with a unique name based on the date, time, and mac address
+        fname = f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}" + str(machine_id) + '.csv'
         dump_csv(pslst, fname)
 
-        # try and connect files to the sftp
         try:
-            print('UPLOAD SUCCEEDED')
+            # attempt to establish an sftp connection if the previous one failed
+            if sftp == None:
+                sftp = init_sftp()
+            # upload the CSV and delete it from disk
             upload_csv(sftp, fname)
-            os.remove(fname) #removes a file.
-            # if upload succeeds dump to server and delete the file
+            if debug:
+                print('UPLOAD SUCCEEDED')
+            os.remove(fname)
+
+            # if upload succeeds try and dump any previously failed uploads
             for file in failed_files:
                 upload_csv(sftp, file)
+                if debug:
+                    print('PREVIOUSLY FAILED UPLOAD SUCCEEDED')
                 os.remove(file)
+            
+            # pull most recent version of malcious process file from server
+            pull_malicious(sftp, '../bad.txt')
         except:
+            # set sftp connection to none to let us know that there is a connection issue
+            sftp = None
             # if fails add the current file to a queue of files that we didn't upload
-            print("UPLOAD FAILED")
+            if debug:
+                print("UPLOAD FAILED")
             failed_files.append(fname)
         
-        time.sleep(sleep_time) # Sleep for 30 seconds
+        # try and open malicious process file and kill bad processes if they're running
+        try:
+            with open('bad.txt', 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line in proc_dict:
+                        os.kill(proc_dict[line], 9)
+
+                        if debug:
+                            print('Killed ' + line + 'with pid ' + proc_dict[line])
+                        
+                        del proc_dict[line]
+        except:
+            if debug:
+                print('Bad process file not found or unable to kill malicious process')
+
+        # Pause data collection for some period of time
+        time.sleep(sleep_time) 
         
+# run the script
 if __name__ == '__main__':
     main()
