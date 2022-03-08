@@ -11,7 +11,7 @@ pip install psutil
 
 Download the file frontend.pem from the frontend channel in the IPRO discord  
 Download ServiceInfo.py from the frontend GitHub repository  
-Create the directory where you wish to store the downloaded files (IT MUST BE THE SAME DIRECTORY)  
+Create the directory where you wish to store the downloaded files (THEY MUST BE THE SAME DIRECTORY)  
 
 ### Manual Running  
 If you don't want this process to start at launch, just run it from the terminal using  
