@@ -18,10 +18,10 @@ def upload_csv(sftp, fname):
 
 def init_sftp():
     try:
-        cnopts = pysftp.CnOpts()
-        cnopts.hostkeys = None
-        sftp = pysftp.Connection('54.86.178.133', username='awsftpuser', password='Ipro597dontguessme!', cnopts=cnopts)
-        sftp.cwd('')   #Put path to directory here
+        foobar = pysftp.CnOpts()
+        foobar.hostkeys = None
+        sftp = pysftp.Connection('3.92.144.196', username='frontend', private_key='frontend.pem', cnopts=foobar)
+        sftp.cwd('upload')   #Put path to directory here
         return sftp
     except:
         print('An error occurred trying to connect.')
@@ -115,6 +115,7 @@ def main():
 
         # try and connect files to the sftp
         try:
+            print('UPLOAD SUCCEEDED')
             upload_csv(sftp, fname)
             os.remove(fname) #removes a file.
             # if upload succeeds dump to server and delete the file
@@ -125,7 +126,6 @@ def main():
             # if fails add the current file to a queue of files that we didn't upload
             print("UPLOAD FAILED")
             failed_files.append(fname)
-            print(failed_files)
         
         time.sleep(sleep_time) # Sleep for 30 seconds
         
