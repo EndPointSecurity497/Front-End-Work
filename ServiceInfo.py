@@ -13,6 +13,7 @@ from uuid import getnode as get_mac
 ### CONFIGURABLE VARIABLES ###
 sleep_time = 30                 # sets interval between data collections
 debug = True                    # if set, prints to console
+pull = False                    # if set, attempts to pull malicious process file from AWS
 keep = False                    # if set, does not delete files after uploading
 ftp_key = 'frontend.pem'        # sets the path to the ftp key
 ip_addr = '3.92.144.196'        # sets the ip address of the ftp server
@@ -87,6 +88,10 @@ def main():
         if debug:
             print('LOGGED IN AS ADMIN')
 
+    # on the first run, CPU% always shows 0
+    # so we should not upload that data
+    first = True 
+
     # gets total amount of system memory (RAM)
     sys_mem = psutil.virtual_memory()[0] 
 
@@ -139,7 +144,10 @@ def main():
                 pid = proc.pid
 
                 # map process name to the pid
-                proc_dict[name] = pid
+                if name in proc_dict:
+                    proc_dict[name].append(pid)
+                else:
+                    proc_dict[name] = [pid]
                 
                 path = None
                 if pid != 0: # pid 0 is a dummy process initiated by windows that causes errors
@@ -156,18 +164,22 @@ def main():
                 
         # dump the csv with a unique name based on the date, time, and mac address
         fname = f"{datetime.datetime.now():%Y-%m-%d_h%Hm%Ms%Sa}" + str(machine_id) + '.csv'
-        dump_csv(pslst, fname)
+        if not first:
+            dump_csv(pslst, fname)
 
         try:
             # attempt to establish an sftp connection if the previous one failed
             if sftp == None:
                 sftp = init_sftp()
             # upload the CSV and delete it from disk
-            upload_csv(sftp, fname)
-            if debug:
-                print('UPLOAD SUCCEEDED')
-            if not keep:
-                os.remove(fname)
+            if not first:
+                upload_csv(sftp, fname)
+                if debug:
+                    print('UPLOAD SUCCEEDED')
+                if not keep:
+                    os.remove(fname)
+            else:
+                first = False
 
             # if upload succeeds try and dump any previously failed uploads
             for file in failed_files:
@@ -179,8 +191,10 @@ def main():
                     os.remove(file)
             
             # pull most recent version of malcious process file from server
-            pull_malicious(sftp, '/bad.txt')
+            if pull:
+                pull_malicious(sftp, '/bad.txt')
         except:
+            first = False
             # set sftp connection to none to let us know that there is a connection issue
             sftp = None
             # if fails add the current file to a queue of files that we didn't upload
@@ -189,22 +203,30 @@ def main():
             failed_files.append(fname)
         
         # try and open malicious process file and kill bad processes if they're running
+        f = None
         try:
-            with open('bad.txt', 'r') as f:
-                if debug:
-                    print('Found malicious processes file on disk')
-                for line in f:
-                    line = line.strip()
-                    if line in proc_dict:
-                        os.kill(proc_dict[line], 9)
-
-                        if debug:
-                            print('Killed ' + line + 'with pid ' + proc_dict[line])
-                        
-                        del proc_dict[line]
-        except:
+            f = open('bad.txt', 'r')
             if debug:
-                print('Bad process file not found or unable to kill malicious process')
+                print('Found malicious processes file on disk')
+        except:
+            f = None
+            if debug:
+                print('Bad process file could not be opened')
+
+        if f != None:
+            for line in f:
+                line = line.strip()
+                if line in proc_dict:
+                    for pid in proc_dict[line]:
+                        try:
+                            os.kill(pid, 9)
+
+                            if debug:
+                                print('Killed ' + line + ' with pid ' + str(pid))
+                        except:
+                            if debug:
+                                print('Process ' + line + ' with pid ' + str(pid) + 'not found' )
+            f.close()
 
         # Pause data collection for some period of time
         time.sleep(sleep_time) 
