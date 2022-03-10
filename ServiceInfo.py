@@ -13,7 +13,7 @@ from uuid import getnode as get_mac
 ### CONFIGURABLE VARIABLES ###
 sleep_time = 30                 # sets interval between data collections
 debug = True                    # if set, prints to console
-pull = False                    # if set, attempts to pull malicious process file from AWS
+pull = True                    # if set, attempts to pull malicious process file from AWS
 keep = False                    # if set, does not delete files after uploading
 ftp_key = 'frontend.pem'        # sets the path to the ftp key
 ip_addr = '3.92.144.196'        # sets the ip address of the ftp server
@@ -191,8 +191,8 @@ def main():
                     os.remove(file)
             
             # pull most recent version of malcious process file from server
-            if pull:
-                pull_malicious(sftp, '/bad.txt')
+            if pull and sftp != None:
+                pull_malicious(sftp, 'bad.txt')
         except:
             first = False
             # set sftp connection to none to let us know that there is a connection issue
