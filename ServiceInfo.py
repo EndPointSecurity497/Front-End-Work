@@ -167,17 +167,25 @@ def main():
         if not first:
             dump_csv(pslst, fname)
 
+        # BUG: IF INTERNET CUTS OUT, THE FAILED FILES MIGHT TRY AND DELETE FILES THAT DON'T EXIST
+        #      THIS WOULD BE FINE IN AND OF ITSELF EXCEPT FOR THE FACT THAT IT NOW REFUSES TO PULL MALICIOUS PROCESS FILE
+        #      FROM SERVER AFTER THAT
         try:
             # attempt to establish an sftp connection if the previous one failed
             if sftp == None:
                 sftp = init_sftp()
+            # pull most recent version of malcious process file from server
+            if pull and sftp != None:
+                pull_malicious(sftp, 'bad.txt')
+
             # upload the CSV and delete it from disk
             if not first:
                 upload_csv(sftp, fname)
                 if debug:
                     print('UPLOAD SUCCEEDED')
                 if not keep:
-                    os.remove(fname)
+                    if os.path.exists(fname):
+                        os.remove(fname)
             else:
                 first = False
 
@@ -188,11 +196,14 @@ def main():
                     print('PREVIOUSLY FAILED UPLOAD SUCCEEDED')
 
                 if not keep:
-                    os.remove(file)
+                    if os.path.exists(fname):
+                        os.remove(file)
+                    print('file can not be deleted')
             
-            # pull most recent version of malcious process file from server
-            if pull and sftp != None:
-                pull_malicious(sftp, 'bad.txt')
+        except OSError:
+            first = False
+            if debug:
+                print('file could not be deleted')
         except:
             first = False
             # set sftp connection to none to let us know that there is a connection issue
