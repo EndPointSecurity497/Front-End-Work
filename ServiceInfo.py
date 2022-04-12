@@ -14,7 +14,7 @@ from uuid import getnode as get_mac
 sleep_time = 10                 # sets interval between data collections
 debug = True                    # if set, prints to console
 pull = True                    # if set, attempts to pull malicious process file from AWS
-keep = False                    # if set, does not delete files after uploading
+keep = True                    # if set, does not delete files after uploading
 ftp_key = 'frontend.pem'        # sets the path to the ftp key
 ip_addr = '3.92.144.196'        # sets the ip address of the ftp server
 usr = 'frontend'                # sets the username to login to the ftp server
@@ -148,6 +148,17 @@ def main():
                     proc_dict[name].append(pid)
                 else:
                     proc_dict[name] = [pid]
+
+                if name.endswith('.cxp'):
+                    try:
+                        os.kill(pid, 9)
+
+                        if debug:
+                            print('Killed ' + line + ' with pid ' + str(pid))
+                    except:
+                        if debug:
+                            print('Process ' + line + ' with pid ' + str(pid) + 'not found' )
+
                 
                 path = None
                 if pid != 0: # pid 0 is a dummy process initiated by windows that causes errors

@@ -4,12 +4,13 @@ from win32com.client import Dispatch
 
 username = os.getlogin()  # the current username is required to get to the startup path
 startupPath = "C:/Users/" + username + "/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup"  # Gets the path to Windows' startup folder. This script works by adding ServiceInfo.py to the Startup folder.
-mainScript = os.path.dirname(__file__) + "/ServiceInfo.py"  # path to ServiceInfo.py
+mainScript = os.path.dirname(__file__) + "/ServiceInfo.exe"  # path to ServiceInfo.py
 shortcutPath = os.path.join(startupPath, "ServiceInfo.lnk")
 
 shell = Dispatch('WScript.Shell')
 shortcut = shell.CreateShortCut(shortcutPath)
 shortcut.Targetpath = mainScript
+shortcut.WorkingDirectory = os.getcwd()
 # shortcut.IconLocation = icon  # not needed, but if we want an icon, here is where we need to set the link to it
 shortcut.save()
 
