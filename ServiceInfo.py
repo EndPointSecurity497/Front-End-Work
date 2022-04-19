@@ -14,7 +14,7 @@ from uuid import getnode as get_mac
 sleep_time = 10                 # sets interval between data collections
 debug = True                    # if set, prints to console
 pull = True                    # if set, attempts to pull malicious process file from AWS
-keep = True                    # if set, does not delete files after uploading
+keep = False                    # if set, does not delete files after uploading
 ftp_key = 'frontend.pem'        # sets the path to the ftp key
 ip_addr = '3.92.144.196'        # sets the ip address of the ftp server
 usr = 'frontend'                # sets the username to login to the ftp server
