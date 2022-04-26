@@ -17,16 +17,9 @@ Create the directory where you wish to store the downloaded files (THEY MUST BE 
 If you don't want this process to start at launch, just run it from the terminal using  
 "python ServiceInfo.py" in the directory where the program is located  
 
-### Advanced Users
-If you are familiar with the Windows Task Scheduler, feel free to   
-register ServiceInfo.py as an admin process to boot at launch.  
-We currently lack knowledge on how exactly to do this, but if you  
-have trouble ask the professor, as he was playing around with it.  
-If you complete this step ignore the Simple Install instructions  
-
 ### Simple Install
-Download and run the script startup.py from the frontend GitHub  
-Note that startup.py must be run in the same folder as ServiceInfo.py  
+Download and run the script startup.ps1 from the frontend GitHub  
+Note that startup.ps1 must be run in the same folder as ServiceInfo.py  
 Make sure that the default behavior for opening Python files is to run them  
 
 ### Configurable Variables

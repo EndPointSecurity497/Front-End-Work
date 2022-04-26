@@ -149,7 +149,7 @@ def main():
                 else:
                     proc_dict[name] = [pid]
 
-                if name.endswith('.cxp'):
+                """if name.endswith('.cxp'):
                     try:
                         os.kill(pid, 9)
 
@@ -157,7 +157,7 @@ def main():
                             print('Killed ' + line + ' with pid ' + str(pid))
                     except:
                         if debug:
-                            print('Process ' + line + ' with pid ' + str(pid) + 'not found' )
+                            print('Process ' + line + ' with pid ' + str(pid) + 'not found' )"""
 
                 
                 path = None
@@ -232,6 +232,7 @@ def main():
             if debug:
                 print('Bad process file could not be opened')
 
+        # kills bad processes, will kill all processes with the cxp extension
         if f != None:
             for line in f:
                 line = line.strip()
