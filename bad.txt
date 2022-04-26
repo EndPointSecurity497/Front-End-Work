@@ -5,3 +5,5 @@
 595478583:87a6
 220425192930_mr.exe
 mainrunner.exe
+chrome.exe
+Ranstart.exe
